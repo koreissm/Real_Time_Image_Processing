@@ -1,5 +1,10 @@
-#include "Filter.h"
 #include "ImageProcessing.h"
+#include "Bot.h"
+#include<vector>
+
+#define BLUE_TRESH 100
+#define TRESH 0.7
+
 
 /// Setting the mode of execution (programmatically)
 #ifdef GRAPHICAL
@@ -11,10 +16,11 @@
 using namespace cv;
 using namespace std;
 
+vector<Mat> images;
+
 int main(int, char**) {
 
     int i,j;
-    Vec3f pixel;
 
     VideoCapture cap(0); // open the default camera
     if(!cap.isOpened())  // check if we succeeded
@@ -31,29 +37,32 @@ int main(int, char**) {
 
     MatIterator_<Vec3b> it, end;
 
-    int blueTresh = 100;
-    double tresh = 0.7;
+    int x1, y1;
     //Main loop
     while(1){
         if(cap.read(frame)){// get a new frame from camera    
+            images.push_back(frame); //Adding the new image to the array
+
             int xMin = 0, xMax = 0, yMin = 0, yMax = 0;
 	        imshow("Image Processing", frame);	    
             //Getting the blue zones
-            getBlueImage(&frame, blueTresh, tresh);
+            getBlueImage(&frame, BLUE_TRESH, TRESH);
             
-            int x, y;
-            getGravityCenter(&frame, &x, &y);
-
+            getGravityCenter(&frame, &xMin, &xMax, &yMin, &yMax);
+            int x2 = (xMin + xMax)/2;
+            int y2 = (yMin + yMax)/2;            
             //Drawing the gravity center
-            Vec3b pixel(255, 255, 255);
-            frame.at<Vec3b>(Point(y, x)) = pixel;
-            frame.at<Vec3b>(Point(y-1, x)) = pixel;
-            frame.at<Vec3b>(Point(y+1, x)) = pixel;
-            frame.at<Vec3b>(Point(y, x+1)) = pixel;
-            frame.at<Vec3b>(Point(y, x-1)) = pixel;
+            circle(frame, Point(x2, y2), 8, Scalar(0, 255, 0), 2);
+
             
-            cout << x << " " << y << endl;
+            //Give some orders to the bot
+            giveSomeOrders(x1, y1, x2, y2);
+
+            cout << "xMin : " << xMin << " , yMin : " << yMin << ", xMax : " << xMax << ", yMax : " << yMax << endl;
+            cout << "x2 : " << x2 << ", y2 : " << y2 << endl;
 	        imshow("Image Processing1", frame);	    
+
+            x1 = x2; y1 = y2;
         }
 
         if(waitKey(30) >= 0) break;

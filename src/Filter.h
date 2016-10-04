@@ -9,4 +9,4 @@ using namespace cv;
 
 void getBlueImage(Mat *frame, int blueTresh, double tresh);
 
-void getGravityCenter(Mat *frame, int *x, int *y); 
+void getGravityCenter(Mat *frame, int *xMin, int *xMax, int *yMin, int *yMax);
