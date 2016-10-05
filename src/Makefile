@@ -1,9 +1,11 @@
-main: main.o Filter.o ImageProcessing.o Bot.o
-	g++ main.o Filter.o ImageProcessing.o Bot.o -o main -lopencv_core -lopencv_highgui -lopencv_imgproc
-	./main
+main: main.o Filter.o ImageProcessing.o Bot.o SerialClass.o
+	g++ main.o Filter.o ImageProcessing.o Bot.o SerialClass.o -o main -lopencv_core -lopencv_highgui -lopencv_imgproc
 
 main.o:
 	g++ -c main.C
+
+SerialClass.o:
+	g++ -c SerialClass.C
 
 Bot.o:
 	g++ -c Bot.C

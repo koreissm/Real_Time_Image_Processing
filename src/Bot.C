@@ -1,25 +1,23 @@
 #include "Bot.h"
 
 
-void giveSomeOrders(int x1, int y1, int x2, int y2) {
-    FILE *file;
-    file = fopen(DEVICE_NAME, "w");  //Opening device file
-    //fprintf(file,"%s",argv[2]); //Writing to the file
-    //fprintf(file,"%c",','); //To separate digits
+void giveSomeOrders(FILE* arduino, int x1, int y1, int x2, int y2) {
+    int xMove = 0, yMove = 0;
     
     if (x1 < x2) {//Go Right
-
+        xMove = X_MOVE;
     }
-    else {//Go left
-        
+    else if (x1 > x2) {//Go left
+        xMove = -X_MOVE;
     }
 
     if (y1 < y2) {//Go Down
-
+        yMove = Y_MOVE;
     }
-    else {//Go up
-
+    else if (y1 > y2) {//Go up
+        yMove = -Y_MOVE;
     }
     
-    fclose(file);
+    fprintf(arduino,"%d:%d,", xMove, yMove); //Writing to the file
+    
 }
