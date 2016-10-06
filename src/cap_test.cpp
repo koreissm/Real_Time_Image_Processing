@@ -61,7 +61,7 @@ int main(int, char**) {
 
             //Calculating the interest points
             Mat k;
-            double Gx, Gy; 
+            double Gx, Gy, GxGy; 
             k = frame.clone();
             vector<Pixel> pixels;
             int n = 1000000;
@@ -69,12 +69,41 @@ int main(int, char**) {
 
             for(int y = 1; y < k.rows-1 ; y++) {
                 for(int x = 1; x < k.cols-1 ; x++){
-                    Gx =  sobelX.at<uchar>(y-1, x-1) + sobelX.at<uchar>(y, x-1) + sobelX.at<uchar>(y+1, x-1) + sobelX.at<uchar>(y-1, x) + sobelX.at<uchar>(y+1, x) + sobelX.at<uchar>(y-1, x+1) +  sobelX.at<uchar>(y, x+1) + sobelX.at<uchar>(y+1, x+1);
-                    Gy =  sobelY.at<uchar>(y-1, x-1) + sobelY.at<uchar>(y, x-1) + sobelY.at<uchar>(y+1, x-1) + sobelY.at<uchar>(y-1, x) + sobelY.at<uchar>(y+1, x) + sobelY.at<uchar>(y-1, x+1) +  sobelY.at<uchar>(y, x+1) + sobelY.at<uchar>(y+1, x+1);
-                    k.at<double>(y,x) = ((((sobelX.at<uchar>(y,x) * sobelX.at<uchar>(y,x))*(Gy*Gy)) + ((sobelY.at<uchar>(y,x) * sobelY.at<uchar>(y,x))* (Gx*Gx)) - 2*(sobelX.at<uchar>(y,x) * sobelY.at<uchar>(y,x)* Gx * Gy )) / ((Gy*Gy) + (Gx*Gx)));
-                    if (k.at<double>(y, x) * n < min * n) min = k.at<double>(y, x);
-                    if (k.at<double>(y, x) * n > max * n) max = k.at<double>(y, x);
-                    //cout << "k : " << k.at<double>(y, x) << endl;
+                    Gx =    sobelX.at<uchar>(y-1, x-1) + 
+                            sobelX.at<uchar>(y, x-1) + 
+                            sobelX.at<uchar>(y+1, x-1) + 
+                            sobelX.at<uchar>(y-1, x) + 
+                            sobelX.at<uchar>(y+1, x) +
+                            sobelX.at<uchar>(y-1, x+1) +  
+                            sobelX.at<uchar>(y, x+1) + 
+                            sobelX.at<uchar>(y+1, x+1);
+                    
+                    Gy =    sobelY.at<uchar>(y-1, x-1) + 
+                            sobelY.at<uchar>(y, x-1) + 
+                            sobelY.at<uchar>(y+1, x-1) + 
+                            sobelY.at<uchar>(y-1, x) + 
+                            sobelY.at<uchar>(y+1, x) + 
+                            sobelY.at<uchar>(y-1, x+1) + 
+                            sobelY.at<uchar>(y, x+1) + 
+                            sobelY.at<uchar>(y+1, x+1);
+
+                    GxGy =  sobelX.at<uchar>(y-1,x-1) * sobelY.at<uchar>(y-1,x-1) +
+                            sobelX.at<uchar>(y,x-1) * sobelY.at<uchar>(y,x-1) + 
+                            sobelX.at<uchar>(y+1,x-1) * sobelY.at<uchar>(y+1,x-1) + 
+                            sobelX.at<uchar>(y-1,x) * sobelY.at<uchar>(y-1,x) + 
+                            sobelX.at<uchar>(y+1,x) * sobelY.at<uchar>(y+1,x) + 
+                            sobelX.at<uchar>(y-1,x+1) * sobelY.at<uchar>(y-1,x+1) + 
+                            sobelX.at<uchar>(y,x+1) * sobelY.at<uchar>(y,x+1) + 
+                            sobelX.at<uchar>(y+1,x+1) * sobelY.at<uchar>(y+1,x+1);
+
+                    k.at<long>(y, x) =  ((((sobelX.at<uchar>(y,x) * sobelX.at<uchar>(y,x)) * (Gy*Gy)) 
+                                        + ((sobelY.at<uchar>(y,x) * sobelY.at<uchar>(y,x)) * (Gx*Gx)) 
+                                        - 2 * (sobelX.at<uchar>(y,x) * sobelY.at<uchar>(y,x)* GxGy )) 
+                                        / ((Gy*Gy) + (Gx*Gx)));
+
+                    if (k.at<long>(y, x) * n < min * n) min = k.at<long>(y, x);
+                    if (k.at<long>(y, x) * n > max * n) max = k.at<long>(y, x);
+//                    cout << "k : " << k.at<long>(y, x) << endl;
                 }
             }
         
@@ -83,8 +112,8 @@ int main(int, char**) {
             
              for(int x = 0; x < k.rows ; x++) {
                 for(int y = 0; y < k.cols ; y++){
-                    k.at<double>(x, y) += abs(min);
-                    double v = k.at<double>(x, y) * 255 / (max + abs(min));
+                    k.at<long>(x, y) += abs(min);
+                    double v = k.at<long>(x, y) * 255 / (max + abs(min));
                     uchar m = (uchar) v;
                     Pixel p; p.color = m; p.x = x; p.y = y;
                     //if (m > 150) circle(frame, Point(x, y), 8, Scalar(0, 0, 255), 1); 
@@ -101,7 +130,7 @@ int main(int, char**) {
 
             //Printing the interest points
             for (vector<Pixel>::iterator it=pixels.begin(); it!=pixels.end(); ++it) {
-                circle(frame, Point((*it).x, (*it).y), 8, Scalar(0, 0, 255), 2);
+                circle(frame, Point((*it).x, (*it).y), 1, Scalar(0, 0, 255), 2);
             }
 
             imshow("MyCam", frame);
