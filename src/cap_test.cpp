@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <vector>
 
-#define NB_INTEREST_POINTS 20
+#define NB_INTEREST_POINTS 50
 
 using namespace std;
 using namespace cv;
@@ -60,15 +60,15 @@ int main(int, char**) {
             }
 
             //Calculating the interest points
-            Mat k;
             double Gx, Gy, GxGy; 
-            k = frame.clone();
-            vector<Pixel> pixels;
+            //vector<Pixel> pixels;
+            map <double, Pixel> pixels;
             int n = 1000000;
+            double k[frame.rows][frame.cols];
             double min = n, max = -n;
 
-            for(int y = 1; y < k.rows-1 ; y++) {
-                for(int x = 1; x < k.cols-1 ; x++){
+            for(int y = 1; y < frame.rows-1 ; y++) {
+                for(int x = 1; x < frame.cols-1 ; x++){
                     Gx =    sobelX.at<uchar>(y-1, x-1) + 
                             sobelX.at<uchar>(y, x-1) + 
                             sobelX.at<uchar>(y+1, x-1) + 
@@ -96,13 +96,13 @@ int main(int, char**) {
                             sobelX.at<uchar>(y,x+1) * sobelY.at<uchar>(y,x+1) + 
                             sobelX.at<uchar>(y+1,x+1) * sobelY.at<uchar>(y+1,x+1);
 
-                    k.at<long>(y, x) =  ((((sobelX.at<uchar>(y,x) * sobelX.at<uchar>(y,x)) * (Gy*Gy)) 
+                    k[y][x] =  ((((sobelX.at<uchar>(y,x) * sobelX.at<uchar>(y,x)) * (Gy*Gy)) 
                                         + ((sobelY.at<uchar>(y,x) * sobelY.at<uchar>(y,x)) * (Gx*Gx)) 
                                         - 2 * (sobelX.at<uchar>(y,x) * sobelY.at<uchar>(y,x)* GxGy )) 
                                         / ((Gy*Gy) + (Gx*Gx)));
 
-                    if (k.at<long>(y, x) * n < min * n) min = k.at<long>(y, x);
-                    if (k.at<long>(y, x) * n > max * n) max = k.at<long>(y, x);
+                    if (k[y][x] * n < min * n) min = k[y][x];
+                    if (k[y][x] * n > max * n) max = k[y][x];
 //                    cout << "k : " << k.at<long>(y, x) << endl;
                 }
             }
@@ -110,34 +110,30 @@ int main(int, char**) {
 //            cout << "Min : " << min << ", Max : " << max << endl;
 
             
-             for(int x = 0; x < k.rows ; x++) {
-                for(int y = 0; y < k.cols ; y++){
-                    k.at<long>(x, y) += abs(min);
-                    double v = k.at<long>(x, y) * 255 / (max + abs(min));
+             for(int x = 0; x < frame.rows ; x++) {
+                for(int y = 0; y < frame.cols ; y++){
+                    k[x][y] += abs(min);
+                    double v = k[x][y] * 255 / (max + abs(min));
                     uchar m = (uchar) v;
-                    Pixel p; p.color = m; p.x = x; p.y = y;
-                    //if (m > 150) circle(frame, Point(x, y), 8, Scalar(0, 0, 255), 1); 
+                    Pixel p; p.color = m; p.x = y; p.y = x;
                     //Inserting in the vector
-                    if (pixels.size() < NB_INTEREST_POINTS)
-                        pixels.push_back(p);
-                    else {
-                        pixels.erase(pixels.begin());
-                        pixels.push_back(p);
-                        sort(pixels.begin(), pixels.end(), comparePixels);
-                    }
+                    pixels[m] = p;
                 }
             }
 
             //Printing the interest points
-            for (vector<Pixel>::iterator it=pixels.begin(); it!=pixels.end(); ++it) {
-                circle(frame, Point((*it).x, (*it).y), 1, Scalar(0, 0, 255), 2);
+            int number = 0;
+            for (map<double, Pixel>::iterator i = pixels.end(); i != pixels.begin(); i--) {
+                if (number == NB_INTEREST_POINTS) break;
+                circle(frame, Point(i->second.x, i->second.y), 1, Scalar(0, 0, 255), 1);
+                number++;
             }
 
             imshow("MyCam", frame);
             imshow("Norme", norme);            
 	    
         }
-        if(waitKey(30) >= 0) break;
+        if(waitKey(25) >= 0) break;
     }
     // the camera will be deinitialized automatically in VideoCapture destructor
     return 0;
