@@ -4,7 +4,9 @@
 #include <limits.h>
 #include <vector>
 
-#define NB_INTEREST_POINTS 50
+#define NB_INTEREST_POINTS 30
+#define WIDTH 320
+#define HEIGHT 240
 
 using namespace std;
 using namespace cv;
@@ -33,12 +35,17 @@ int main(int, char**) {
     namedWindow("Norme",1);
     moveWindow("Norme", 325, 20);
     
-    cap.set(CV_CAP_PROP_FRAME_WIDTH,320);  //taille de la fenetre
-    cap.set(CV_CAP_PROP_FRAME_HEIGHT,240); //au dela de 320*240, image qui lag
+    cap.set(CV_CAP_PROP_FRAME_WIDTH,WIDTH);  //taille de la fenetre
+    cap.set(CV_CAP_PROP_FRAME_HEIGHT,HEIGHT); //au dela de 320*240, image qui lag
 
+    vector<Mat> images;
 
     MatIterator_<Vec3b> it, end;
 
+    double k_old[HEIGHT][WIDTH];
+    map <double, Pixel> pixels_old;
+
+    int nbFrame = 0;
     while(1){
         if(cap.read(frame)){// get a new frame from camera
             sobelX = Mat(frame.rows, frame.cols, CV_8UC1, Scalar(0, 0, 0)); 
@@ -103,32 +110,83 @@ int main(int, char**) {
 
                     if (k[y][x] * n < min * n) min = k[y][x];
                     if (k[y][x] * n > max * n) max = k[y][x];
-//                    cout << "k : " << k.at<long>(y, x) << endl;
                 }
             }
         
-//            cout << "Min : " << min << ", Max : " << max << endl;
-
-            
-             for(int x = 0; x < frame.rows ; x++) {
-                for(int y = 0; y < frame.cols ; y++){
-                    k[x][y] += abs(min);
-                    double v = k[x][y] * 255 / (max + abs(min));
-                    uchar m = (uchar) v;
-                    Pixel p; p.color = m; p.x = y; p.y = x;
+             for(int x = 0; x < frame.rows ; x+=4) {
+                for(int y = 0; y < frame.cols ; y+=4){
+                    double max = -n;
+                    Pixel p;
                     //Inserting in the vector
-                    pixels[m] = p;
+                    for(int i = x; i < x+4 ; i++) {
+                        for(int j = y; j < y+4 ; j++){
+                            k[x][y] += abs(min);
+                            double v = k[x][y] * 255 / (max + abs(min));
+                            uchar m = (uchar) v;
+                        
+                            if (v > max) {
+                                p.color = m; p.x = y; p.y = x;
+                                max = m;
+                            }
+                        }
+                    }
+
+                    pixels[p.color] = p;
                 }
             }
 
             //Printing the interest points
             int number = 0;
+            long maxAcc = -n*n;
+            int acc[HEIGHT+256][WIDTH+256]; for (int i = 0; i < frame.rows+256; i++) for (int j = 0; j < frame.cols+256; j++) acc[i][j] = 0; //Initializing the Acc
             for (map<double, Pixel>::iterator i = pixels.end(); i != pixels.begin(); i--) {
                 if (number == NB_INTEREST_POINTS) break;
-                circle(frame, Point(i->second.x, i->second.y), 1, Scalar(0, 0, 255), 1);
+                circle(frame, Point(i->second.x, i->second.y), 3, Scalar(0, 0, 255), 1);
                 number++;
+
+                double min = n*n;
+                int Vx, Vy;
+                maxAcc = -n;
+                //Calculating the deplacement
+                for (map<double, Pixel>::iterator j = pixels_old.end(); j != pixels_old.begin(); j--) {
+                    if (number == NB_INTEREST_POINTS) break;
+                    if (!(i->second.x == j->second.x && i->second.y == j->second.y)) {
+                        double distance = sqrt(pow(i->second.x - j->second.x, 2) + pow(i->second.y - j->second.y, 2));
+                        if (min < distance) {
+                            min = distance;
+//                            cout << distance << endl;
+                            Vx = i->second.x - j->second.x;
+                            Vy = i->second.y - j->second.y;
+                            acc[Vx+255][Vy+255]++;
+                            if (acc[Vx+255][Vy+255] > maxAcc) maxAcc = acc[Vx+255][Vy+255];
+//                            cout << "Acc : " << acc[Vx+255][Vy+255] << endl;
+  //                          cout << "x1 : " << i->second.x << ", x2 : " << j->second.x << endl;
+  //                          cout << "y1 : " << i->second.y << ", y2 : " << j->second.y << endl;
+//                            cout << ", Vx : " << Vx << ", Vy : " << Vy << endl;
+                        }
+                    }
+                }
             }
 
+            //cout << "Max acc : " << maxAcc << endl;
+            //Calculation of the speed
+            int speed = 0;
+            int Vx, Vy;
+            for (int i = 0; i < HEIGHT+256; i++) {
+                for (int j = 0; j < WIDTH+256; j++) {
+                    if (acc[i][j] > speed) {speed = acc[i][j]; Vx = i-255; Vy = j-255;}
+                }
+            }
+
+            cout << "Speed : " << speed << ", Vx : " << Vy << ", Vy : " << Vy << endl;
+
+            //Calculating the deplacement
+            
+
+            //Storing the old K matrix
+            if (nbFrame == 3) {pixels_old = pixels; nbFrame = 0;}
+            nbFrame++;
+            
             imshow("MyCam", frame);
             imshow("Norme", norme);            
 	    
